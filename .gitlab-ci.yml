@@ -1,0 +1,65 @@
+stages:
+  - build
+  - attest
+  - sign
+  - verify
+
+.install-cosign:
+  before_script:
+    - wget -O cosign https://github.com/sigstore/cosign/releases/download/v2.2.3/cosign-linux-amd64
+    - chmod +x cosign && mv cosign /usr/local/bin/
+
+image: alpine:latest
+
+build:
+  variables:
+    RUNNER_GENERATE_ARTIFACTS_METADATA: true
+  stage: build
+  script:
+    - echo "Build Command"
+  artifacts:
+    name: "demo.txt"    
+    paths:
+      - demo.txt
+
+attest:
+  extends: .install-cosign
+  stage: attest
+  id_tokens:
+    SIGSTORE_ID_TOKEN:
+      aud: sigstore
+  script:
+    - cosign attest-blob --yes --predicate demo.txt-metadata.json --output-attestation demo.txt.att --output-certificate demo.txt.att.crt --output-signature demo.txt.att.sig --oidc-issuer $CI_SERVER_URL --identity-token $SIGSTORE_ID_TOKEN demo.txt 
+  artifacts:
+    paths:
+      - demo.txt
+      - "*.att"
+      - "*.sig"
+      - "*.crt"
+
+sign:
+  extends: .install-cosign
+  stage: sign
+  id_tokens:
+    SIGSTORE_ID_TOKEN:
+      aud: sigstore
+  script:
+    - cosign sign-blob --yes --output-certificate demo.txt.crt --output-signature demo.txt.sig --oidc-issuer $CI_SERVER_URL --identity-token $SIGSTORE_ID_TOKEN demo.txt
+  artifacts:
+    paths:
+      - demo.txt
+      - "*.att"
+      - "*.sig"
+      - "*.crt"
+
+verify-attestation:
+  extends: .install-cosign
+  stage: verify
+  script:
+    - cosign verify-blob-attestation --signature demo.txt.att.sig --certificate demo.txt.att.crt --certificate-oidc-issuer https://gitlab.com --certificate-identity https://gitlab.com/${CI_PROJECT_PATH}//.gitlab-ci.yml@refs/heads/${CI_DEFAULT_BRANCH} demo.txt
+
+verify-package:
+  extends: .install-cosign
+  stage: verify
+  script:
+    - cosign verify-blob --signature demo.txt.sig --certificate demo.txt.crt --certificate-oidc-issuer https://gitlab.com --certificate-identity https://gitlab.com/${CI_PROJECT_PATH}//.gitlab-ci.yml@refs/heads/${CI_DEFAULT_BRANCH} demo.txt
