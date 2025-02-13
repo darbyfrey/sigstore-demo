@@ -1,5 +1,5 @@
-name: GitHub Actions Demo
-run-name: ${{ github.actor }} is testing out GitHub Actions 🚀
+name: Build and Generate Attestation
+run-name: Testing actions/attest-build-provenance@v2
 on: [push]
 permissions:
   id-token: write
@@ -8,7 +8,7 @@ permissions:
   packages: write
 jobs:
   build:
-    runs-on: alpine-latest
+    runs-on: ubuntu-latest
     steps:
       - name: Check out repository code
         uses: actions/checkout@v4
