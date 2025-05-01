@@ -5,21 +5,17 @@ stages:
   - sign
   - verify
 
-variables:
-  IMAGE_NAME: alpine:latest
-
-
 .install-cosign:
   before_script:
     - wget -O cosign https://github.com/sigstore/cosign/releases/download/v2.2.3/cosign-linux-amd64
     - chmod +x cosign && mv cosign /usr/local/bin/
 
-image: $IMAGE_NAME
+image: alpine:latest
 
 provenance:
   stage: provenance
   script:
-    - sh ./generate-provenance.sh
+    - sh ./generate-provenance.sh demo.txt
   artifacts:
     paths:
       - provenance.json

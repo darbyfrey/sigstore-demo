@@ -1,30 +1,27 @@
 #!/bin/bash
 set -euo pipefail
 
-# --- Required Environment Variables ---
-# IMAGE_NAME: fully qualified image name (e.g. registry.gitlab.com/owner/project/image:tag)
-# CI_COMMIT_SHA: current Git commit SHA
-# CI_REPOSITORY_URL: GitLab repository URL
-# CI_PROJECT_PATH: GitLab namespace/project
-# CI_PIPELINE_ID: GitLab pipeline ID
+# --- Usage ---
+# ./generate-provenance.sh path/to/artifact [output-file]
+# Example:
+# ./generate-provenance.sh dist/my-app ./provenance.json
 
-if [[ -z "${IMAGE_NAME:-}" ]]; then
-  echo "Error: IMAGE_NAME is not set"
+ARTIFACT_PATH="${1:-}"
+OUTPUT_FILE="${2:-provenance.json}"
+
+if [[ -z "$ARTIFACT_PATH" || ! -f "$ARTIFACT_PATH" ]]; then
+  echo "Error: valid artifact file path must be provided as the first argument."
   exit 1
 fi
 
-echo "Generating SLSA provenance for $IMAGE_NAME..."
-
-# Get image digest
-IMAGE_DIGEST=$(docker inspect --format='{{index .RepoDigests 0}}' "$IMAGE_NAME" | cut -d@ -f2)
-
-# Build timestamps
+ARTIFACT_NAME=$(basename "$ARTIFACT_PATH")
+ARTIFACT_HASH=$(sha256sum "$ARTIFACT_PATH" | awk '{print $1}')
 BUILD_STARTED=$(date --utc +%Y-%m-%dT%H:%M:%SZ)
-sleep 2  # simulate build time
+sleep 1
 BUILD_FINISHED=$(date --utc +%Y-%m-%dT%H:%M:%SZ)
 
-# Output file
-OUTPUT_FILE="provenance.json"
+echo "Generating SLSA provenance for artifact: $ARTIFACT_PATH"
+echo "SHA256: $ARTIFACT_HASH"
 
 cat <<EOF > "$OUTPUT_FILE"
 {
@@ -32,28 +29,28 @@ cat <<EOF > "$OUTPUT_FILE"
   "predicateType": "https://slsa.dev/provenance/v0.2",
   "subject": [
     {
-      "name": "$IMAGE_NAME",
+      "name": "$ARTIFACT_NAME",
       "digest": {
-        "sha256": "$IMAGE_DIGEST"
+        "sha256": "$ARTIFACT_HASH"
       }
     }
   ],
   "predicate": {
     "builder": {
-      "id": "https://gitlab.com/$CI_PROJECT_PATH"
+      "id": "https://gitlab.com/${CI_PROJECT_PATH:-unknown}"
     },
     "buildType": "https://gitlab.com/gitlab-ci",
     "invocation": {
       "configSource": {
-        "uri": "$CI_REPOSITORY_URL",
+        "uri": "${CI_REPOSITORY_URL:-unknown}",
         "digest": {
-          "sha1": "$CI_COMMIT_SHA"
+          "sha1": "${CI_COMMIT_SHA:-unknown}"
         },
         "entryPoint": ".gitlab-ci.yml"
       },
       "parameters": {},
       "environment": {
-        "CI_PIPELINE_ID": "$CI_PIPELINE_ID"
+        "CI_PIPELINE_ID": "${CI_PIPELINE_ID:-unknown}"
       }
     },
     "metadata": {
@@ -68,9 +65,9 @@ cat <<EOF > "$OUTPUT_FILE"
     },
     "materials": [
       {
-        "uri": "$CI_REPOSITORY_URL",
+        "uri": "${CI_REPOSITORY_URL:-unknown}",
         "digest": {
-          "sha1": "$CI_COMMIT_SHA"
+          "sha1": "${CI_COMMIT_SHA:-unknown}"
         }
       }
     ]
@@ -78,4 +75,4 @@ cat <<EOF > "$OUTPUT_FILE"
 }
 EOF
 
-echo "Provenance written to $OUTPUT_FILE"
+echo "✅ Provenance written to $OUTPUT_FILE"
