@@ -15,7 +15,7 @@ image: alpine:latest
 provenance:
   stage: provenance
   script:
-    - ./generate-provenance.sh
+    - sh ./generate-provenance.sh
   artifacts:
     paths:
       - provenance.json
