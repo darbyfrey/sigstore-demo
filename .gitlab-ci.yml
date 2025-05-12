@@ -20,7 +20,7 @@ provenance:
     paths:
       - provenance.json
 
-build:
+build-runner-metadata:
   variables:
     RUNNER_GENERATE_ARTIFACTS_METADATA: true
   stage: build
@@ -30,6 +30,15 @@ build:
     name: "demo.txt"    
     paths:
       - demo.txt
+
+build-rails-metadata:
+  stage: build
+  script:
+    - echo "Build Command"
+  artifacts:
+    name: "demo.txt"    
+    paths:
+      - demo.txt     
 
 attest:
   extends: .install-cosign
