@@ -16,7 +16,7 @@ jobs:
         run: |
           ls ${{ github.workspace }}
       - run: echo "Build Command"
-      - run: echo "${{ env.MY_SECRET_DATA }}"
+      - run: echo "${{ vars.MY_SECRET_DATA }}"
       - name: Generate artifact attestation
         uses: actions/attest-build-provenance@v2
         with:
